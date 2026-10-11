@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Per te</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;1,400&family=Great+Vibes&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f7b0d1;--ink:#6b0f2a;--red:#c4123f;--rose:#e8588f;--paper:#fff4f8;--blush:#fbd3e5}
+*{box-sizing:border-box}
+body{margin:0;padding:48px 22px 72px;background:var(--bg);color:var(--ink);font-family:'Fraunces',Georgia,serif;line-height:1.6}
+body.attesa{visibility:hidden}
+header{text-align:center;max-width:460px;margin:0 auto 44px}
+h1{font-family:'Great Vibes','Brush Script MT',cursive;font-weight:400;font-size:3.2rem;line-height:1.1;margin:0 0 8px;color:var(--red)}
+header p{margin:0;font-style:italic}
+.sec{max-width:380px;margin:0 auto 56px;text-align:center}
+.foto{display:block;width:100%;aspect-ratio:3/4;object-fit:cover;background:var(--blush);color:var(--rose);border:10px solid #fff;border-bottom-width:34px;box-shadow:5px 6px 0 var(--rose);transform:rotate(-2deg)}
+.sec:nth-of-type(even) .foto{transform:rotate(2deg)}
+.sec p{margin:26px 4px 0;font-size:1.1rem}
+.finale{max-width:520px;margin:72px auto 0;text-align:center;opacity:0;transition:opacity 1.6s ease}
+.finale.vis{opacity:1}
+.finale .frase{font-family:'Great Vibes','Brush Script MT',cursive;font-size:clamp(2.6rem,12vw,4.2rem);line-height:1.15;color:var(--red);margin:0 0 14px}
+.finale .firma{font-style:italic;margin:0}
+.lettera{max-width:460px;margin:0 auto;padding:30px 24px;background:var(--paper);border:2px solid var(--red);box-shadow:6px 6px 0 var(--rose)}
+.lettera p{margin:0;white-space:pre-line;font-size:1.1rem;text-align:left}
+.extra{max-width:460px;margin:64px auto 0;text-align:center}
+#btnCur{font:600 1.1rem 'Fraunces',Georgia,serif;cursor:pointer;background:var(--red);color:#fff;border:0;border-radius:999px;padding:12px 40px}
+#btnCur:hover{background:var(--ink)}
+#btnCur:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+.curiosita{margin-top:28px;padding:30px 24px;background:var(--paper);border:2px solid var(--red);box-shadow:6px 6px 0 var(--rose);text-align:left;scroll-margin-top:16px;animation:apri .5s ease}
+.curiosita p{margin:0;white-space:pre-line;font-size:1.1rem}
+@keyframes apri{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.finale{transition:none;opacity:1}.curiosita{animation:none}}
+</style>
+<script src="segreto.js"></script>
+<script src="dati.js"></script>
+</head>
+<body class="attesa">
+<header>
+  <h1 id="titolo"></h1>
+  <p id="intro"></p>
+</header>
+<div id="sezioni"></div>
+<section class="lettera" id="boxLettera"><p id="lettera"></p></section>
+<section class="finale" id="finale">
+  <p class="frase" id="frase"></p>
+  <p class="firma" id="firma"></p>
+</section>
+<div class="extra" id="extra">
+  <button id="btnCur" type="button" aria-expanded="false" aria-controls="curiosita">Curiosità</button>
+  <section class="curiosita" id="curiosita" hidden><p id="curTesto"></p></section>
+</div>
+
+<script>
+/* I testi NON sono più in questo file: stanno cifrati in dati.js.
+   Per cambiarli usa privato/cifra.html (vedi privato/contenuti.txt). */
+(async () => {
+  const $ = id => document.getElementById(id);
+
+  // Il codice inserito in index.html serve da chiave. Senza codice giusto non si legge nulla.
+  let codice = null;
+  try { codice = sessionStorage.getItem('k'); } catch (e) {}
+  const chiaro = codice && globalThis.DATI ? await SEGRETO.decifra(DATI.dati, codice) : null;
+  if (!chiaro) { location.replace('index.html'); return; }
+  const C = JSON.parse(chiaro);
+
+  $('titolo').textContent = C.titolo;
+  $('intro').textContent = C.intro;
+  $('frase').textContent = C.frase;
+  $('firma').textContent = C.firma;
+
+  if (C.lettera) $('lettera').textContent = C.lettera; else $('boxLettera').remove();
+
+  C.sezioni.forEach((s, i) => {
+    const sec = document.createElement('section'); sec.className = 'sec';
+    const img = document.createElement('img'); img.className = 'foto'; img.src = s.foto;
+    img.alt = 'Foto ' + (i + 1); img.loading = 'lazy';
+    const p = document.createElement('p'); p.textContent = s.testo;
+    sec.append(img, p); $('sezioni').appendChild(sec);
+  });
+
+  // Bottone "Curiosità": apre/chiude il testo in fondo alla pagina
+  if (C.curiosita) {
+    $('curTesto').textContent = C.curiosita;
+    $('btnCur').addEventListener('click', () => {
+      const box = $('curiosita'), apri = box.hidden;
+      box.hidden = !apri;
+      $('btnCur').setAttribute('aria-expanded', String(apri));
+      if (apri) box.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    });
+  } else $('extra').remove();
+
+  document.body.classList.remove('attesa');
+
+  // La frase finale compare piano quando ci arrivi
+  const fin = $('finale');
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((en, o) => { if (en[0].isIntersecting) { fin.classList.add('vis'); o.disconnect(); } }, { threshold: .4 }).observe(fin);
+  } else fin.classList.add('vis');
+})();
+</script>
+</body>
+</html>
